@@ -9,7 +9,7 @@
 </div>
 
 <p align="center">
-   <img src="https://github.com/skillerious/ModNinja/blob/main/assets/Screenshot%202025-04-29%20141054.png" alt="ss1" width="200"/>
+   <img src="https://github.com/skillerious/ModNinja/blob/main/assets/Screenshot%202025-04-29%20141054.png" alt="ss1"/>
 </p>
 
 ---
