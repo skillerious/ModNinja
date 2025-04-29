@@ -1,8 +1,12 @@
-# ModNinja
+# <p align="center">ModNinja
+</p>
 
-![ModNinja Logo](https://github.com/skillerious/ModNinja/blob/main/assets/modninjalogo1.png)
+<p align="center">
+   <img src="https://github.com/skillerious/ModNinja/blob/main/assets/modninjalogo1.png" alt="ModNinjaLogo" width="200"/>
+</p>
 
 **ModNinja** is a lightweight, read-only Vortex mod browser for Windows. It lets you quickly explore, manage, and export details of your game mods without launching Vortex itself.
+</div>
 
 ---
 
