@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>ModNinja — Vortex Mod Browser</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header>
+  <nav id="toolbar">
+    <button data-cmd="refresh"   data-tooltip="Refresh games list"><img src="assets/refresh.png"       alt=""></button>
+    <button data-cmd="scan"      data-tooltip="Scan mods"><img    src="assets/scan.png"          alt=""></button>
+    <button data-cmd="locate"    data-tooltip="Locate custom folder"><img  src="assets/locate.png"    alt=""></button>
+    <button data-cmd="openDir"   data-tooltip="Open mods folder"><img src="assets/open.png"          alt=""></button>
+    <span class="sep"></span>
+    <button data-cmd="exportTxt" data-tooltip="Export mods as TXT"><img  src="assets/export.png"       alt=""></button>
+    <button data-cmd="saveOrder" data-tooltip="Save mod order"><img  src="assets/save_order.png"   alt=""></button>
+    <button data-cmd="loadOrder" data-tooltip="Load mod order"><img  src="assets/load_order.png"  alt=""></button>
+    <span class="sep"></span>
+    <button data-cmd="theme"     data-tooltip="Toggle light/dark theme"><img src="assets/theme.png"        alt=""></button>
+    <button data-cmd="about"     data-tooltip="About ModNinja"><img src="assets/about.png"         alt=""></button>
+    <span class="toolbar-spacer"></span>
+    <button data-cmd="settings"  data-tooltip="Settings"><img src="assets/settings.png"      alt=""></button>
+  </nav>
+</header>
+
+<main>
+  <!-- ───────── GAMES PANE ───────── -->
+  <aside id="games">
+    <div id="gameSearchWrap">
+      <input id="gameSearch" placeholder="🔍 Search games … (Ctrl+G)">
+      <div id="gameSearchBtns">
+        <button id="btnFilterGames" data-tooltip="Filter games"><img src="assets/filter.png" alt=""></button>
+        <button id="btnToggleView"  data-tooltip="Toggle grid/list view"><img src="assets/view.png"   alt=""></button>
+      </div>
+    </div>
+    <ul id="gameList" class="game-list"></ul>
+  </aside>
+
+  <!-- ───────── MODS / DETAILS PANE ───────── -->
+  <section id="mods">
+    <div id="searchWrap">
+      <input id="search" placeholder="🔍 Search mods … (Ctrl+F)">
+    </div>
+    <div id="modSplit">
+      <ul id="modList"></ul>
+      <article id="details"><p>Select a mod …</p></article>
+    </div>
+  </section>
+</main>
+
+<footer id="status">
+  <div class="status-left">
+    <span id="statusGame"><span class="label">Game:</span><span class="value">—</span></span>
+    <span id="statusFile"><span class="label">Mod:</span><span class="value">—</span></span>
+    <span id="statusSizeMod"><span class="label">Size:</span><span class="value">—</span></span>
+    <span id="statusModDate"><span class="label">Modified:</span><span class="value">—</span></span>
+  </div>
+  <div class="status-right">
+    <span id="statusTotalSize"><span class="label">Total Size:</span><span class="value spinner"></span></span>
+    <span id="statusCount"><span class="label">Mods:</span><span class="value">0</span></span>
+  </div>
+</footer>
+
+<!-- Scan Dialog -->
+<div id="scanBackdrop" class="modal-backdrop">
+  <div class="modal dialog-modal">
+    <div class="modal-header">
+      <h3 id="scanTitle">Scanning Mods…</h3>
+      <button class="modal-close" aria-label="Close">&times;</button>
+    </div>
+    <div class="modal-body">
+      <progress id="scanProg" value="0" max="100"></progress>
+      <pre id="scanText"></pre>
+    </div>
+    <div class="modal-footer">
+      <button class="confirm" id="scanClose" disabled>Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- About Dialog -->
+<div id="aboutBackdrop" class="modal-backdrop">
+  <div class="modal dialog-modal about-modal">
+    <div class="modal-header">
+      <h3>About ModNinja</h3>
+      <button class="modal-close" aria-label="Close">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p>A lightweight, read-only Vortex mod browser.</p>
+      <p>Version <span id="aboutVersion">0.1.0</span></p>
+      <ul>
+        <li><strong>Author:</strong> Robin Doak</li>
+        <li><strong>GitHub:</strong> <a href="https://github.com/skillerious" target="_blank">skillerious</a></li>
+        <li><strong>License:</strong> MIT</li>
+      </ul>
+    </div>
+    <div class="modal-footer">
+      <button class="confirm" id="aboutClose">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Context Menus -->
+<div id="modContextMenu"  class="context-menu"></div>
+<div id="gameContextMenu" class="context-menu"></div>
+
+<!-- Tooltip -->
+<div id="toolbarTooltip" class="toolbar-tooltip"></div>
+
+<script type="module" src="renderer.js"></script>
+</body>
+</html>

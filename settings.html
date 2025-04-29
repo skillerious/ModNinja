@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Settings — ModNinja</title>
+  <link rel="stylesheet" href="styles.css">
+  <!-- SweetAlert2 for dialogs -->
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <style>
+    /* ===== Vortex folder picker styling ===== */
+    .folder-input-group {
+      display: flex;
+      gap: 8px;
+    }
+    .folder-input-group input {
+      flex: 1;
+      background: var(--input-bg);
+      border: 1px solid var(--input-border);
+      border-radius: 4px;
+      padding: 8px;
+      color: var(--fg);
+      font-size: 14px;
+    }
+    .folder-input-group button {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      padding: 8px 12px;
+      cursor: pointer;
+      transition: filter var(--transition);
+      font-size: 14px;
+    }
+    .folder-input-group button:hover {
+      filter: brightness(1.1);
+    }
+  </style>
+</head>
+<body>
+  <div class="settings-container">
+    <!-- Sidebar -->
+    <aside class="settings-sidebar">
+      <h1>Settings</h1>
+      <nav>
+        <button class="settings-tab active" data-tab="general">General</button>
+        <button class="settings-tab" data-tab="appearance">Appearance</button>
+        <button class="settings-tab" data-tab="api">API</button>
+        <button class="settings-tab" data-tab="notifications">Notifications</button>
+      </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <section class="settings-content">
+      <form id="settingsForm" class="settings-form">
+
+        <!-- General Section -->
+        <div id="general" class="settings-section active">
+          <h2>General</h2>
+
+          <!-- Auto-refresh toggle -->
+          <div class="setting-item">
+            <label for="autoRefresh">Auto-refresh games list</label>
+            <label class="switch">
+              <input type="checkbox" id="autoRefresh">
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <!-- Show hidden mods toggle -->
+          <div class="setting-item">
+            <label for="showHidden">Show hidden mods</label>
+            <label class="switch">
+              <input type="checkbox" id="showHidden">
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <!-- Vortex folder picker -->
+          <div class="setting-item">
+            <label for="vortexFolder">Vortex Folder</label>
+            <div class="folder-input-group">
+              <input type="text" id="vortexFolder" placeholder="Not set" readonly>
+              <button type="button" id="browseBtn">Browse…</button>
+              <button type="button" id="scanBtn">Scan</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Appearance Section -->
+        <div id="appearance" class="settings-section">
+          <h2>Appearance</h2>
+          <div class="setting-item">
+            <label for="themeSelect">Theme</label>
+            <select id="themeSelect">
+              <option value="dark">Dark</option>
+              <option value="light">Light</option>
+            </select>
+          </div>
+          <div class="setting-item">
+            <label for="compactMode">Compact list mode</label>
+            <label class="switch">
+              <input type="checkbox" id="compactMode">
+              <span class="slider"></span>
+            </label>
+          </div>
+        </div>
+
+        <!-- API Section -->
+        <div id="api" class="settings-section">
+          <h2>API</h2>
+          <div class="setting-item">
+            <label for="clientId">IGDB Client ID</label>
+            <input type="text" id="clientId" placeholder="Enter IGDB Client ID">
+          </div>
+          <div class="setting-item">
+            <label for="clientSecret">IGDB Client Secret</label>
+            <input type="text" id="clientSecret" placeholder="Enter IGDB Client Secret">
+          </div>
+        </div>
+
+        <!-- Notifications Section -->
+        <div id="notifications" class="settings-section">
+          <h2>Notifications</h2>
+          <div class="setting-item">
+            <label for="enableNotifications">Enable notifications</label>
+            <label class="switch">
+              <input type="checkbox" id="enableNotifications">
+              <span class="slider"></span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="settings-actions">
+          <button type="button" id="cancelBtn">Cancel</button>
+          <button type="submit" id="saveBtn">Save</button>
+        </div>
+      </form>
+    </section>
+  </div>
+
+  <script>
+    const { loadSettings, saveSettings, chooseFolder, listGames } = window.api;
+
+    // Tab navigation
+    document.querySelectorAll('.settings-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.settings-tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        document.querySelectorAll('.settings-section').forEach(s => s.classList.remove('active'));
+        document.getElementById(tab.dataset.tab).classList.add('active');
+      });
+    });
+
+    // Populate on load
+    window.addEventListener('DOMContentLoaded', async () => {
+      const s = await loadSettings();
+      if (!s) return;
+      document.getElementById('autoRefresh').checked         = !!s.autoRefresh;
+      document.getElementById('showHidden').checked          = !!s.showHidden;
+      document.getElementById('vortexFolder').value          = s.vortexFolder || '';
+      document.getElementById('themeSelect').value           = s.theme || 'dark';
+      document.getElementById('compactMode').checked         = !!s.compactMode;
+      document.getElementById('clientId').value              = s.clientId || '';
+      document.getElementById('clientSecret').value          = s.clientSecret || '';
+      document.getElementById('enableNotifications').checked = !!s.enableNotifications;
+    });
+
+    // Browse for Vortex folder
+    document.getElementById('browseBtn').addEventListener('click', async () => {
+      const result = await chooseFolder();
+      if (result && result.modsDir) {
+        document.getElementById('vortexFolder').value = result.modsDir;
+      }
+    });
+
+    // Scan for Vortex installations (uses existing games:list)
+    document.getElementById('scanBtn').addEventListener('click', async () => {
+      const games = await listGames();
+      if (!games.length) {
+        return Swal.fire({
+          icon: 'error',
+          title: 'Not found',
+          text: 'No Vortex installation detected on any drive.',
+          background: '#1f1f1f',
+          color: '#e0e0e0',
+          confirmButtonColor: '#4a8cff'
+        });
+      }
+      // derive root from first game's modsDir (…\Vortex\<game>\mods)
+      const modsDir = games[0].modsDir;
+      const root = modsDir.replace(/\\[^\\]+\\mods$/, '');
+      document.getElementById('vortexFolder').value = root;
+      Swal.fire({
+        icon: 'success',
+        title: 'Vortex folder set',
+        text: root,
+        timer: 1500,
+        showConfirmButton: false,
+        background: '#1f1f1f',
+        color: '#e0e0e0'
+      });
+    });
+
+    // Save handler
+    document.getElementById('settingsForm').addEventListener('submit', async e => {
+      e.preventDefault();
+      const settings = {
+        autoRefresh: document.getElementById('autoRefresh').checked,
+        showHidden: document.getElementById('showHidden').checked,
+        vortexFolder: document.getElementById('vortexFolder').value,
+        theme: document.getElementById('themeSelect').value,
+        compactMode: document.getElementById('compactMode').checked,
+        clientId: document.getElementById('clientId').value,
+        clientSecret: document.getElementById('clientSecret').value,
+        enableNotifications: document.getElementById('enableNotifications').checked
+      };
+      await saveSettings(settings);
+      Swal.fire({
+        icon: 'success',
+        title: 'Settings saved!',
+        background: '#1f1f1f',
+        color: '#e0e0e0',
+        confirmButtonColor: '#4a8cff'
+      });
+    });
+
+    // Cancel closes window
+    document.getElementById('cancelBtn').addEventListener('click', () => window.close());
+  </script>
+</body>
+</html>
