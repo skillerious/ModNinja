@@ -8,7 +8,6 @@
 **ModNinja** is a lightweight, read-only Vortex mod browser for Windows. It lets you quickly explore, manage, and export details of your game mods without launching Vortex itself.
 </div>
 
-
 <p align="center">
    <img src="https://github.com/skillerious/ModNinja/blob/main/assets/Screenshot%202025-04-29%20141054.png" alt="ss1" width="200"/>
 </p>
