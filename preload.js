@@ -12,11 +12,14 @@ let marked = null;
 })();
 
 contextBridge.exposeInMainWorld('api', {
+  // Core IPC
   listGames:        ()            => ipcRenderer.invoke('games:list'),
   getCover:         id            => ipcRenderer.invoke('cover:get', id),
   listMods:         dir           => ipcRenderer.invoke('mods:list', dir),
   dirStats:         dir           => ipcRenderer.invoke('mods:stats', dir),
   modInfo:          (d,n)         => ipcRenderer.invoke('mod:info', d, n),
+  modReadme:        (d,n)         => ipcRenderer.invoke('mod:getReadme', d, n),
+  modScreenshots:   (d,n)         => ipcRenderer.invoke('mod:getScreenshots', d, n),
   openPath:         p             => ipcRenderer.invoke('open:path', p),
   saveOrder:        (d,l)         => ipcRenderer.invoke('order:save', d, l),
   loadOrder:        d             => ipcRenderer.invoke('order:load', d),
@@ -24,8 +27,11 @@ contextBridge.exposeInMainWorld('api', {
   chooseFolder:     ()            => ipcRenderer.invoke('choose:folder'),
   openSettings:     ()            => ipcRenderer.invoke('open:settings'),
   deleteMods:       dir           => ipcRenderer.invoke('games:deleteMods', dir),
-  modReadme:        (d,n)         => ipcRenderer.invoke('mod:getReadme', d, n),
-  modScreenshots:   (d,n)         => ipcRenderer.invoke('mod:getScreenshots', d, n),
+
+  // External URL
+  openExternal:     url           => ipcRenderer.invoke('open-external', url),
+
+  // Markdown support
   markdownToHtml:   text          => {
     if (marked) {
       return typeof marked.parse === 'function'
@@ -39,9 +45,7 @@ contextBridge.exposeInMainWorld('api', {
     return `<pre style="white-space:pre-wrap;margin:0;">${escaped}</pre>`;
   },
 
-  // Settings load/save
+  // Settings
   loadSettings:     ()            => ipcRenderer.invoke('settings:load'),
-  saveSettings:     settings      => ipcRenderer.invoke('settings:save', settings),
-  // Vortex folder picker
-  chooseVortexFolder: ()          => ipcRenderer.invoke('settings:pickVortex')
+  saveSettings:     settings      => ipcRenderer.invoke('settings:save', settings)
 });

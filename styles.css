@@ -18,6 +18,11 @@
 
 /*──────────────────────────────────────────────────────────────────────────*/
 /* Global scrollbars                                                       */
+* {
+  box-sizing: border-box;
+  scrollbar-width: thin;
+  scrollbar-color: var(--accent) var(--panel);
+}
 *::-webkit-scrollbar {
   width: 8px;
   height: 8px;
@@ -32,14 +37,9 @@
 *::-webkit-scrollbar-thumb:hover {
   background: var(--sel);
 }
-scrollbar-width: thin;
-scrollbar-color: var(--accent) var(--panel);
 
 /*──────────────────────────────────────────────────────────────────────────*/
 /* Base                                                                     */
-* {
-  box-sizing: border-box;
-}
 body, header, nav, ul, li, button, footer, footer * {
   user-select: none !important;
 }
@@ -743,4 +743,61 @@ body.light {
   --input-border: #ccc;
   --detail-bg: #f9f9f9;
   --detail-fg: #333;
+}
+
+/*──────────────────────────────────────────────────────────────────────────*/
+/* Screenshot grid & blue-border thumbnails */
+#details .screenshots {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 8px;
+  margin-top: 8px;
+}
+#details .screenshots .screenshot {
+  width: 200px;
+  height: 200px;
+  object-fit: cover;
+  border: 2px solid var(--accent);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: transform var(--transition);
+}
+#details .screenshots .screenshot:hover {
+  transform: scale(1.05);
+}
+
+/* Lightbox overrides (size set dynamically in JS) */
+.lightbox-modal {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.lightbox-modal .modal-body {
+  padding: 0;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.lightbox-modal img {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+}
+/*──────────────────────────────────────────────────────────────────────────*/
+/* Nexus button styling */
+.mod-url-btn {
+  display: inline-block;
+  padding: 8px 12px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius);
+  text-decoration: none;
+  margin: var(--gap) 0;
+  cursor: pointer;
+  transition: filter var(--transition);
+}
+.mod-url-btn:hover {
+  filter: brightness(1.1);
 }

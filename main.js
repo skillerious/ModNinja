@@ -1,4 +1,5 @@
 // main.js
+
 const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron');
 const path  = require('path');
 const fs    = require('fs').promises;
@@ -108,14 +109,12 @@ function vortexRoots() {
   const localAppData = process.env.LOCALAPPDATA;
   const candidates   = [appData, localAppData].filter(Boolean);
 
-  // compute relative Vortex path for each candidate
   const relPaths = candidates.map(base => {
-    const drive = path.parse(base).root;            // e.g. "C:\\"
-    const rel   = path.relative(drive, base);       // e.g. "Users\\Robin\\AppData\\Roaming"
-    return path.join(rel, 'Vortex');                // "...\\Vortex"
+    const drive = path.parse(base).root;
+    const rel   = path.relative(drive, base);
+    return path.join(rel, 'Vortex');
   });
 
-  // scan A:–Z:
   for (let c = 65; c <= 90; c++) {
     const driveLetter = String.fromCharCode(c) + ':\\';
     for (const rel of relPaths) {
@@ -157,9 +156,18 @@ async function listMods(dir) {
     .sort();
 }
 
+/**
+ * Recursively count total size, file count, and folder count.
+ * NOTE the key change: `onlyFiles: false` so directories show up
+ * in fast-glob’s results and get counted.
+ */
 async function dirStats(dir) {
   let size = 0, files = 0, folders = 0;
-  for await (const rel of fg.stream(['**/*'], { cwd: dir, dot: true })) {
+  for await (const rel of fg.stream(['**/*'], {
+    cwd: dir,
+    dot: true,
+    onlyFiles: false
+  })) {
     const st = await fs.stat(path.join(dir, rel));
     if (st.isDirectory()) folders++;
     else { files++; size += st.size; }
@@ -188,25 +196,31 @@ app.on('window-all-closed', () => {
 });
 
 // ─── IPC Handlers ───────────────────────────────────────────────────────
-ipcMain.handle('games:list',         ()            => discoverGames());
-ipcMain.handle('cover:get',          (_e, id)      => igdbCoverURL(id));
-ipcMain.handle('mods:list',          (_e, dir)     => listMods(dir));
-ipcMain.handle('mods:stats',         (_e, dir)     => dirStats(dir));
-ipcMain.handle('mod:info',           async (_e,dir,name) => {
+ipcMain.handle('games:list',        ()            => discoverGames());
+ipcMain.handle('cover:get',         (_e, id)      => igdbCoverURL(id));
+ipcMain.handle('mods:list',         (_e, dir)     => listMods(dir));
+ipcMain.handle('mods:stats',        (_e, dir)     => dirStats(dir));
+ipcMain.handle('mod:info',          async (_e,dir,name) => {
   const full = path.join(dir, name);
   const st   = await fs.stat(full);
-  return { full, ctime: st.birthtime, mtime: st.mtime, ...(await dirStats(full)) };
+  return {
+    full,
+    ctime: st.birthtime,
+    mtime: st.mtime,
+    atime: st.atime,
+    ...(await dirStats(full))
+  };
 });
-ipcMain.handle('open:path',          (_e,p)        => shell.openPath(p));
-ipcMain.handle('order:save',         async (_e,dir,list) => {
+ipcMain.handle('open:path',         (_e,p)        => shell.openPath(p));
+ipcMain.handle('order:save',        async (_e,dir,list) => {
   await fs.writeFile(path.join(dir, ORDER_FILE), JSON.stringify(list));
   return true;
 });
-ipcMain.handle('order:load',         async (_e,dir) => {
+ipcMain.handle('order:load',        async (_e,dir) => {
   try { return JSON.parse(await fs.readFile(path.join(dir, ORDER_FILE), 'utf8')); }
   catch { return null; }
 });
-ipcMain.handle('export:list',        async (_e,mods,fmt) => {
+ipcMain.handle('export:list',       async (_e,mods,fmt) => {
   const { canceled, filePath } = await dialog.showSaveDialog(win, {
     defaultPath: `modlist.${fmt}`,
     filters: [{ name: fmt.toUpperCase(), extensions: [fmt] }]
@@ -220,7 +234,7 @@ ipcMain.handle('export:list',        async (_e,mods,fmt) => {
   await fs.writeFile(filePath, data, 'utf8');
   return path.basename(filePath);
 });
-ipcMain.handle('choose:folder',      async ()       => {
+ipcMain.handle('choose:folder',     async ()       => {
   const { canceled, filePaths } = await dialog.showOpenDialog(win, {
     properties: ['openDirectory']
   });
@@ -233,10 +247,10 @@ ipcMain.handle('choose:folder',      async ()       => {
   }
   return { id, modsDir };
 });
-ipcMain.handle('open:settings',      ()             => {
+ipcMain.handle('open:settings',     ()             => {
   const sw = new BrowserWindow({
     width: 800,
-    height: 550,
+    height: 400,
     parent: win,
     modal: true,
     show: false,
@@ -249,7 +263,7 @@ ipcMain.handle('open:settings',      ()             => {
   sw.loadFile('settings.html');
   sw.once('ready-to-show', () => sw.show());
 });
-ipcMain.handle('mod:getReadme',       async (_e,dir,name) => {
+ipcMain.handle('mod:getReadme',      async (_e,dir,name) => {
   const modPath = path.join(dir, name);
   const candidates = ['README.md','README.txt','INSTALL.txt','CHANGELOG.txt'];
   for (const file of candidates) {
@@ -260,7 +274,7 @@ ipcMain.handle('mod:getReadme',       async (_e,dir,name) => {
   }
   return null;
 });
-ipcMain.handle('mod:getScreenshots',  async (_e,dir,name) => {
+ipcMain.handle('mod:getScreenshots', async (_e,dir,name) => {
   const shotsDir = path.join(dir, name, 'screenshots');
   try {
     const files = await fs.readdir(shotsDir);
@@ -271,10 +285,13 @@ ipcMain.handle('mod:getScreenshots',  async (_e,dir,name) => {
   }
 });
 // ─── New: Delete all mods for a game ───────────────────────────────────
-ipcMain.handle('games:deleteMods',    async (_e, modsDir) => {
+ipcMain.handle('games:deleteMods',   async (_e, modsDir) => {
   await fs.rm(modsDir, { recursive: true, force: true });
   return true;
 });
 // ─── Settings load/save ────────────────────────────────────────────────
-ipcMain.handle('settings:load',       async ()       => store.get('settings', {}));
-ipcMain.handle('settings:save',       async (_e,s)   => { store.set('settings', s); return true; });
+ipcMain.handle('settings:load',      async ()       => store.get('settings', {}));
+ipcMain.handle('settings:save',      async (_e,s)   => { store.set('settings', s); return true; });
+
+// ─── New: open external URLs ───────────────────────────────────────────
+ipcMain.handle('open-external',      (_e, url)     => shell.openExternal(url));
