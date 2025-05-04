@@ -1,5 +1,4 @@
 // main.js
-
 const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron');
 const path  = require('path');
 const fs    = require('fs').promises;
@@ -158,8 +157,6 @@ async function listMods(dir) {
 
 /**
  * Recursively count total size, file count, and folder count.
- * NOTE the key change: `onlyFiles: false` so directories show up
- * in fast-glob’s results and get counted.
  */
 async function dirStats(dir) {
   let size = 0, files = 0, folders = 0;
@@ -174,6 +171,8 @@ async function dirStats(dir) {
   }
   return { size, files, folders };
 }
+
+/* ────────────────────────────────────────────────────────────────────── */
 
 let win;
 app.whenReady().then(() => {
@@ -195,7 +194,8 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
 });
 
-// ─── IPC Handlers ───────────────────────────────────────────────────────
+/* ─── IPC Handlers ───────────────────────────────────────────────────── */
+
 ipcMain.handle('games:list',        ()            => discoverGames());
 ipcMain.handle('cover:get',         (_e, id)      => igdbCoverURL(id));
 ipcMain.handle('mods:list',         (_e, dir)     => listMods(dir));
@@ -284,14 +284,27 @@ ipcMain.handle('mod:getScreenshots', async (_e,dir,name) => {
     return [];
   }
 });
-// ─── New: Delete all mods for a game ───────────────────────────────────
 ipcMain.handle('games:deleteMods',   async (_e, modsDir) => {
   await fs.rm(modsDir, { recursive: true, force: true });
   return true;
 });
-// ─── Settings load/save ────────────────────────────────────────────────
 ipcMain.handle('settings:load',      async ()       => store.get('settings', {}));
 ipcMain.handle('settings:save',      async (_e,s)   => { store.set('settings', s); return true; });
-
-// ─── New: open external URLs ───────────────────────────────────────────
 ipcMain.handle('open-external',      (_e, url)     => shell.openExternal(url));
+
+/* ─── NEW: Mini file-tree support ───────────────────────────────────── */
+const MAX_TREE_ENTRIES = 800;  // keep UI snappy
+ipcMain.handle('mod:listTree', async (_e, dir, name) => {
+  try {
+    const root = path.join(dir, name);
+    const paths = await fg(['**/*'], {
+      cwd: root,
+      dot: false,
+      onlyFiles: false,
+      followSymbolicLinks: false
+    });
+    return paths.slice(0, MAX_TREE_ENTRIES);
+  } catch {
+    return [];
+  }
+});
