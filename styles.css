@@ -74,15 +74,14 @@ nav#toolbar button {
   padding: 6px;
   margin: 0 4px;
   cursor: pointer;
-  transition: filter var(--transition);
 }
 nav#toolbar button img {
   width: 24px;
   height: 24px;
-  filter: invert(.85) brightness(1.1);
+  transition: filter var(--transition), opacity var(--transition);
 }
 nav#toolbar button:hover img {
-  filter: invert(1) brightness(1.4);
+  filter: brightness(0.8);
 }
 nav#toolbar .sep {
   width: 1px;
@@ -137,7 +136,7 @@ aside#games {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 10px;
+  padding: var(--gap);
   background: var(--panel);
   border-bottom: 1px solid var(--border);
 }
@@ -150,19 +149,47 @@ aside#games {
   color: var(--fg);
   font-size: 14px;
 }
+
+/* Filter & View Buttons with Tooltips */
 #gameSearchBtns {
   display: flex;
   gap: 4px;
 }
 #gameSearchBtns button {
+  position: relative;
   background: none;
   border: none;
   padding: 2px;
   cursor: pointer;
 }
-#gameSearchBtns img {
+#gameSearchBtns button img {
   width: 20px;
   height: 20px;
+  transition: filter var(--transition), opacity var(--transition);
+}
+#gameSearchBtns button:hover img {
+  filter: brightness(0.7);
+}
+#gameSearchBtns button::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  top: 100%;          /* put it just below the button */
+  right: 0;           /* align its right edge to the button’s right */
+  margin-top: 4px;    /* small gap underneath */
+  background: var(--panel);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  padding: 4px 8px;
+  border-radius: var(--radius);
+  white-space: nowrap;
+  font-size: 12px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .15s ease;
+  z-index: 500;
+}
+#gameSearchBtns button:hover::after {
+  opacity: 1;
 }
 
 /*──────────────────────────────────────────────────────────────────────────*/
@@ -332,6 +359,7 @@ section#mods {
   font-size: 20px;
   border-bottom: 1px solid var(--border);
   padding-bottom: 6px;
+  color: var(--accent);
 }
 #details p,
 #details li {
@@ -472,7 +500,7 @@ footer#status {
 .setting-item input[type="text"],
 .setting-item select {
   width: 100%;
-  padding: 8px;
+  padding: 8px 10px;
   border: 1px solid var(--input-border);
   border-radius: 4px;
   background: var(--input-bg);
@@ -587,12 +615,24 @@ footer#status {
   letter-spacing: .5px;
 }
 .modal-header .modal-close {
-  background: none;
+  font-size: 18px;
+  background: transparent;
   border: none;
-  font-size: 20px;
   color: var(--fg);
   cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: background var(--transition), color var(--transition);
+  outline: none;
 }
+.modal-header .modal-close:hover {
+  background: rgba(255,255,255,0.1);
+  color: var(--accent);
+}
+.modal-header .modal-close:focus {
+  box-shadow: 0 0 0 2px var(--accent);
+}
+
 .modal-body {
   padding: 16px;
   max-height: 60vh;
@@ -805,7 +845,6 @@ body.light {
 
 /*──────────────────────────────────────────────────────────────────────────*/
 /*  FILE-TREE POLISH  (caret, row hover)                                    */
-/*──────────────────────────────────────────────────────────────────────────*/
 .tree, .tree ul {
   list-style: none;
   margin: 0;
@@ -816,7 +855,6 @@ body.light {
   line-height: 20px;
   font-size: 13px;
 }
- 
 .tree .row {
   display: flex;
   align-items: center;
@@ -841,18 +879,28 @@ body.light {
   font-size: 10px;
   user-select: none;
 }
-/* Caret ▶ and ▼ */
 .tree .caret::before {
   content: "▶";
 }
 .tree li.expanded > .row > .caret::before {
   content: "▼";
 }
-/* Make the spacer truly empty */
 .tree .caret-spacer::before {
   content: "";
 }
 .tree li.collapsed > ul {
   display: none;
 }
-/* No more last-child rail to clear */
+
+/*──────────────────────────────────────────────────────────────────────────*/
+/* Search focus outlines                                                    */
+#gameSearch,
+#search {
+  outline: none;
+  transition: outline var(--transition), outline-offset var(--transition);
+}
+#gameSearch:focus,
+#search:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
