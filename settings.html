@@ -3,159 +3,324 @@
 <head>
   <meta charset="UTF-8">
   <title>Settings — ModNinja</title>
-  <link rel="stylesheet" href="styles.css">
-  <!-- SweetAlert2 for dialogs -->
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <style>
-    /* ===== Vortex folder picker styling ===== */
-    .folder-input-group {
+    :root {
+      --bg: #161616;
+      --fg: #e0e0e0;
+      --panel: #1f1f1f;
+      --accent: #4a8cff;
+      --border: #333;
+      --radius: 10px;
+      --transition: 0.25s ease;
+      --shadow: 0 6px 24px rgba(0, 0, 0, 0.6);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: "Segoe UI", sans-serif;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--fg);
+      height: 100vh;
       display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .settings-window {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+
+    /* ───── Titlebar ───── */
+    .custom-titlebar {
+      height: 42px;
+      background: var(--panel);
+      color: var(--fg);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      border-bottom: 1px solid var(--border);
+      -webkit-app-region: drag;
+    }
+
+    .custom-titlebar .title {
+      font-size: 15px;
+      font-weight: 500;
+    }
+
+    .custom-titlebar .close-btn {
+      -webkit-app-region: no-drag;
+      background: transparent;
+      border: none;
+      color: var(--fg);
+      font-size: 20px;
+      cursor: pointer;
+      padding: 4px 8px;
+      border-radius: 6px;
+      transition: background var(--transition);
+    }
+
+    .custom-titlebar .close-btn:hover {
+      background: rgba(255,255,255,0.1);
+      color: var(--accent);
+    }
+
+    /* ───── Layout ───── */
+    .settings-container {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    .settings-sidebar {
+      width: 200px;
+      background: var(--panel);
+      border-right: 1px solid var(--border);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
       gap: 8px;
     }
-    .folder-input-group input {
+
+    .settings-sidebar .tab {
+      background: none;
+      border: none;
+      padding: 10px 12px;
+      color: var(--fg);
+      text-align: left;
+      font-size: 14px;
+      border-radius: var(--radius);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: background var(--transition);
+    }
+
+    .settings-sidebar .tab:hover,
+    .settings-sidebar .tab.active {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .settings-main {
       flex: 1;
-      background: var(--input-bg);
-      border: 1px solid var(--input-border);
-      border-radius: 4px;
-      padding: 8px;
+      overflow-y: auto;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 32px;
+      background: var(--bg);
+    }
+
+    .tab-content {
+      display: none;
+      animation: fadeIn 0.3s ease;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    .tab-content h2 {
+      font-size: 18px;
+      color: var(--accent);
+      margin-bottom: 16px;
+    }
+
+    .setting-group {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .setting-group input[type="text"],
+    .setting-group select {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--panel);
       color: var(--fg);
       font-size: 14px;
     }
-    .folder-input-group button {
+
+    /* ───── Toggle ───── */
+    .toggle {
+      position: relative;
+      display: inline-block;
+      width: 46px;
+      height: 24px;
+    }
+
+    .toggle input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider {
+      position: absolute;
+      inset: 0;
+      background-color: var(--border);
+      border-radius: 24px;
+      transition: background var(--transition);
+    }
+
+    .slider::before {
+      content: "";
+      position: absolute;
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      top: 3px;
+      background-color: #fff;
+      border-radius: 50%;
+      transition: transform var(--transition);
+    }
+
+    .toggle input:checked + .slider {
+      background-color: var(--accent);
+    }
+
+    .toggle input:checked + .slider::before {
+      transform: translateX(22px);
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .folder-picker {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      margin-top: 8px;
+    }
+
+    .folder-picker button {
       background: var(--accent);
-      color: #fff;
       border: none;
-      border-radius: 4px;
       padding: 8px 12px;
+      color: #fff;
+      border-radius: 6px;
       cursor: pointer;
       transition: filter var(--transition);
-      font-size: 14px;
     }
-    .folder-input-group button:hover {
+
+    .folder-picker button:hover {
       filter: brightness(1.1);
     }
   </style>
 </head>
 <body>
-  <div class="settings-container">
-    <!-- Sidebar -->
-    <aside class="settings-sidebar">
-      <h1>Settings</h1>
-      <nav>
-        <button class="settings-tab active" data-tab="general">General</button>
-        <button class="settings-tab" data-tab="appearance">Appearance</button>
-        <button class="settings-tab" data-tab="api">API</button>
-        <button class="settings-tab" data-tab="notifications">Notifications</button>
-      </nav>
-    </aside>
-
-    <!-- Main Content -->
-    <section class="settings-content">
-      <form id="settingsForm" class="settings-form">
-
-        <!-- General Section -->
-        <div id="general" class="settings-section active">
+  <div class="settings-window">
+    <header class="custom-titlebar">
+      <span class="title">Settings</span>
+      <button class="close-btn" onclick="window.close()">×</button>
+    </header>
+    <div class="settings-container">
+      <aside class="settings-sidebar">
+        <button class="tab active" data-tab="general">⚙️ General</button>
+        <button class="tab" data-tab="appearance">🎨 Appearance</button>
+        <button class="tab" data-tab="api">🔌 API</button>
+        <button class="tab" data-tab="notifications">🔔 Notifications</button>
+      </aside>
+      <main class="settings-main">
+        <section id="general" class="tab-content active">
           <h2>General</h2>
-
-          <!-- Auto-refresh toggle -->
-          <div class="setting-item">
-            <label for="autoRefresh">Auto-refresh games list</label>
-            <label class="switch">
+          <div class="setting-group">
+            <label for="autoRefresh">Auto-refresh games</label>
+            <label class="toggle">
               <input type="checkbox" id="autoRefresh">
               <span class="slider"></span>
             </label>
           </div>
-
-          <!-- Show hidden mods toggle -->
-          <div class="setting-item">
+          <div class="setting-group">
             <label for="showHidden">Show hidden mods</label>
-            <label class="switch">
+            <label class="toggle">
               <input type="checkbox" id="showHidden">
               <span class="slider"></span>
             </label>
           </div>
-
-          <!-- Vortex folder picker -->
-          <div class="setting-item">
+          <div class="setting-group" style="grid-template-columns: 1fr;">
             <label for="vortexFolder">Vortex Folder</label>
-            <div class="folder-input-group">
-              <input type="text" id="vortexFolder" placeholder="Not set" readonly>
+            <div class="folder-picker">
+              <input type="text" id="vortexFolder" readonly>
               <button type="button" id="browseBtn">Browse…</button>
-              <button type="button" id="scanBtn">Scan</button>
             </div>
           </div>
-        </div>
+        </section>
 
-        <!-- Appearance Section -->
-        <div id="appearance" class="settings-section">
+        <section id="appearance" class="tab-content">
           <h2>Appearance</h2>
-          <div class="setting-item">
+          <div class="setting-group">
             <label for="themeSelect">Theme</label>
             <select id="themeSelect">
               <option value="dark">Dark</option>
               <option value="light">Light</option>
             </select>
           </div>
-          <div class="setting-item">
+          <div class="setting-group">
             <label for="compactMode">Compact list mode</label>
-            <label class="switch">
+            <label class="toggle">
               <input type="checkbox" id="compactMode">
               <span class="slider"></span>
             </label>
           </div>
-        </div>
+        </section>
 
-        <!-- API Section -->
-        <div id="api" class="settings-section">
+        <section id="api" class="tab-content">
           <h2>API</h2>
-          <div class="setting-item">
+          <div class="setting-group">
             <label for="clientId">IGDB Client ID</label>
-            <input type="text" id="clientId" placeholder="Enter IGDB Client ID">
+            <input type="text" id="clientId">
           </div>
-          <div class="setting-item">
+          <div class="setting-group">
             <label for="clientSecret">IGDB Client Secret</label>
-            <input type="text" id="clientSecret" placeholder="Enter IGDB Client Secret">
+            <input type="text" id="clientSecret">
           </div>
-        </div>
+        </section>
 
-        <!-- Notifications Section -->
-        <div id="notifications" class="settings-section">
+        <section id="notifications" class="tab-content">
           <h2>Notifications</h2>
-          <div class="setting-item">
+          <div class="setting-group">
             <label for="enableNotifications">Enable notifications</label>
-            <label class="switch">
+            <label class="toggle">
               <input type="checkbox" id="enableNotifications">
               <span class="slider"></span>
             </label>
           </div>
-        </div>
-
-        <!-- Action Buttons -->
-        <div class="settings-actions">
-          <button type="button" id="cancelBtn">Cancel</button>
-          <button type="submit" id="saveBtn">Save</button>
-        </div>
-      </form>
-    </section>
+        </section>
+      </main>
+    </div>
   </div>
 
   <script>
     const { loadSettings, saveSettings, chooseFolder, listGames } = window.api;
 
-    // Tab navigation
-    document.querySelectorAll('.settings-tab').forEach(tab => {
+    document.querySelectorAll('.tab').forEach(tab => {
       tab.addEventListener('click', () => {
-        document.querySelectorAll('.settings-tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(p => p.classList.remove('active'));
         tab.classList.add('active');
-        document.querySelectorAll('.settings-section').forEach(s => s.classList.remove('active'));
         document.getElementById(tab.dataset.tab).classList.add('active');
       });
     });
 
-    // Populate on load
     window.addEventListener('DOMContentLoaded', async () => {
-      const s = await loadSettings();
-      if (!s) return;
+      const s = await loadSettings(); if (!s) return;
       document.getElementById('autoRefresh').checked         = !!s.autoRefresh;
       document.getElementById('showHidden').checked          = !!s.showHidden;
       document.getElementById('vortexFolder').value          = s.vortexFolder || '';
@@ -166,46 +331,13 @@
       document.getElementById('enableNotifications').checked = !!s.enableNotifications;
     });
 
-    // Browse for Vortex folder
     document.getElementById('browseBtn').addEventListener('click', async () => {
-      const result = await chooseFolder();
-      if (result && result.modsDir) {
-        document.getElementById('vortexFolder').value = result.modsDir;
-      }
+      const res = await chooseFolder();
+      if (res?.modsDir) document.getElementById('vortexFolder').value = res.modsDir;
     });
 
-    // Scan for Vortex installations (uses existing games:list)
-    document.getElementById('scanBtn').addEventListener('click', async () => {
-      const games = await listGames();
-      if (!games.length) {
-        return Swal.fire({
-          icon: 'error',
-          title: 'Not found',
-          text: 'No Vortex installation detected on any drive.',
-          background: '#1f1f1f',
-          color: '#e0e0e0',
-          confirmButtonColor: '#4a8cff'
-        });
-      }
-      // derive root from first game's modsDir (…\Vortex\<game>\mods)
-      const modsDir = games[0].modsDir;
-      const root = modsDir.replace(/\\[^\\]+\\mods$/, '');
-      document.getElementById('vortexFolder').value = root;
-      Swal.fire({
-        icon: 'success',
-        title: 'Vortex folder set',
-        text: root,
-        timer: 1500,
-        showConfirmButton: false,
-        background: '#1f1f1f',
-        color: '#e0e0e0'
-      });
-    });
-
-    // Save handler
-    document.getElementById('settingsForm').addEventListener('submit', async e => {
-      e.preventDefault();
-      const settings = {
+    window.addEventListener('beforeunload', async () => {
+      const cfg = {
         autoRefresh: document.getElementById('autoRefresh').checked,
         showHidden: document.getElementById('showHidden').checked,
         vortexFolder: document.getElementById('vortexFolder').value,
@@ -215,18 +347,8 @@
         clientSecret: document.getElementById('clientSecret').value,
         enableNotifications: document.getElementById('enableNotifications').checked
       };
-      await saveSettings(settings);
-      Swal.fire({
-        icon: 'success',
-        title: 'Settings saved!',
-        background: '#1f1f1f',
-        color: '#e0e0e0',
-        confirmButtonColor: '#4a8cff'
-      });
+      await saveSettings(cfg);
     });
-
-    // Cancel closes window
-    document.getElementById('cancelBtn').addEventListener('click', () => window.close());
   </script>
 </body>
 </html>

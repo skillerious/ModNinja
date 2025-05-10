@@ -4,111 +4,169 @@
   <meta charset="UTF-8">
   <title>ModNinja — Vortex Mod Browser</title>
   <link rel="stylesheet" href="styles.css">
+
+  <!-- ───────── Small inline tweaks (shadows, etc.) ───────── -->
+  <style>
+    :root{
+      --bg:#161616;--panel:#1f1f1f;--border:#333;
+      --accent:#4a8cff;--fg:#e0e0e0;
+      --radius:8px;--gap:16px;--shadow:rgba(0,0,0,0.6);
+      --transition:.2s ease-in-out;
+    }
+
+    .modal{box-shadow:0 8px 24px var(--shadow);border-radius:var(--radius);}
+    .modal-header{background:var(--panel);border-bottom:1px solid var(--border);
+                  padding:var(--gap);display:flex;align-items:center;justify-content:space-between;}
+    .modal-footer{background:var(--panel);border-top:1px solid var(--border);
+                  padding:var(--gap);}
+    .modal-close{background:none;border:none;font-size:20px;color:var(--fg);
+                 cursor:pointer;transition:color var(--transition);}
+    .modal-close:hover{color:var(--accent);}
+  </style>
 </head>
+
 <body>
 
-<header>
-  <nav id="toolbar">
-    <button data-cmd="refresh"   data-tooltip="Refresh games list"><img src="assets/refresh.png"       alt=""></button>
-    <button data-cmd="scan"      data-tooltip="Scan mods"><img    src="assets/scan.png"          alt=""></button>
-    <button data-cmd="locate"    data-tooltip="Locate custom folder"><img  src="assets/locate.png"    alt=""></button>
-    <button data-cmd="openDir"   data-tooltip="Open mods folder"><img src="assets/open.png"          alt=""></button>
-    <span class="sep"></span>
-    <button data-cmd="exportTxt" data-tooltip="Export mods as TXT"><img  src="assets/export.png"       alt=""></button>
-    <button data-cmd="saveOrder" data-tooltip="Save mod order"><img  src="assets/save_order.png"   alt=""></button>
-    <button data-cmd="loadOrder" data-tooltip="Load mod order"><img  src="assets/load_order.png"  alt=""></button>
-    <span class="sep"></span>
-    <button data-cmd="theme"     data-tooltip="Toggle light/dark theme"><img src="assets/theme.png"        alt=""></button>
-    <button data-cmd="about"     data-tooltip="About ModNinja"><img src="assets/about.png"         alt=""></button>
-    <span class="toolbar-spacer"></span>
-    <button data-cmd="settings"  data-tooltip="Settings"><img src="assets/settings.png"      alt=""></button>
-  </nav>
-</header>
+  <!-- ═════════════════════════════ Toolbar ═════════════════════════════ -->
+  <header>
+    <nav id="toolbar">
+      <button data-cmd="refresh"   data-tooltip="Refresh games list"><img src="assets/refresh.png"   alt=""></button>
+      <button data-cmd="scan"      data-tooltip="Scan mods"><img src="assets/scan.png"             alt=""></button>
+      <button data-cmd="locate"    data-tooltip="Locate custom folder"><img src="assets/locate.png" alt=""></button>
+      <button data-cmd="openDir"   data-tooltip="Open mods folder"><img src="assets/open.png"       alt=""></button>
+      <span  class="sep"></span>
+      <button data-cmd="exportTxt" data-tooltip="Export mods as TXT"><img src="assets/export.png"        alt=""></button>
+      <button data-cmd="saveOrder" data-tooltip="Save mod order"><img src="assets/save_order.png"       alt=""></button>
+      <button data-cmd="loadOrder" data-tooltip="Load mod order"><img src="assets/load_order.png"       alt=""></button>
+      <span  class="sep"></span>
+      <button data-cmd="theme"     data-tooltip="Toggle light/dark theme"><img src="assets/theme.png"   alt=""></button>
+      <button data-cmd="about"     data-tooltip="About ModNinja"><img src="assets/about.png"           alt=""></button>
+      <span class="toolbar-spacer"></span>
+      <button data-cmd="settings"  data-tooltip="Settings"><img src="assets/settings.png"              alt=""></button>
+    </nav>
+  </header>
 
-<main>
-  <!-- ───────── GAMES PANE ───────── -->
-  <aside id="games">
-    <div id="gameSearchWrap">
-      <input id="gameSearch" placeholder="🔍 Search games … (Ctrl+G)">
-      <div id="gameSearchBtns">
-        <button id="btnFilterGames" data-tooltip="Filter games"><img src="assets/filter.png" alt=""></button>
-        <button id="btnToggleView"  data-tooltip="Toggle grid/list view"><img src="assets/view.png"   alt=""></button>
+  <!-- ═════════════════════════════ Main layout ═════════════════════════════ -->
+  <main>
+    <!-- ───── Games pane ───── -->
+    <aside id="games">
+      <div id="gameSearchWrap">
+        <input id="gameSearch" placeholder="🔍 Search games … (Ctrl+G)">
+        <div id="gameSearchBtns">
+          <button id="btnFilterGames" data-tooltip="Filter games"><img src="assets/filter.png" alt=""></button>
+          <button id="btnToggleView"  data-tooltip="Toggle grid/list view"><img src="assets/view.png" alt=""></button>
+        </div>
+      </div>
+      <ul id="gameList" class="game-list"></ul>
+    </aside>
+
+    <!-- ───── Mods / Details pane ───── -->
+    <section id="mods">
+      <div id="searchWrap">
+        <input id="search" placeholder="🔍 Search mods … (Ctrl+F)">
+      </div>
+      <div id="modSplit">
+        <ul id="modList"></ul>
+        <article id="details"><p>Select a mod …</p></article>
+      </div>
+    </section>
+  </main>
+
+  <!-- ═════════════════════════════ Status bar ═════════════════════════════ -->
+  <footer id="status">
+    <div class="status-left">
+      <span id="statusGame"><span class="label">Game:</span><span class="value">—</span></span>
+      <span id="statusFile"><span class="label">Mod:</span><span class="value">—</span></span>
+      <span id="statusSizeMod"><span class="label">Size:</span><span class="value">—</span></span>
+      <span id="statusModDate"><span class="label">Modified:</span><span class="value">—</span></span>
+    </div>
+    <div class="status-right">
+      <span id="statusTotalSize"><span class="label">Total Size:</span><span class="value spinner"></span></span>
+      <span id="statusCount"><span class="label">Mods:</span><span class="value">0</span></span>
+    </div>
+  </footer>
+
+  <!-- ═════════════════════════════ Scan Dialog ═════════════════════════════ -->
+  <div id="scanBackdrop" class="modal-backdrop">
+    <div class="modal dialog-modal">
+      <div class="modal-header">
+        <h3 id="scanTitle">Scanning Mods…</h3>
+        <button class="modal-close" aria-label="Close">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <!-- meta row (percent | elapsed | counter) -->
+        <div id="scanMeta">
+          <span id="scanPercent">0&nbsp;%</span>
+          <span id="scanElapsed">00:00</span>
+          <span id="scanCurrent">Mod&nbsp;0&nbsp;/&nbsp;0</span>
+        </div>
+
+        <progress id="scanProg" value="0" max="100"></progress>
+        <pre id="scanText"></pre>
+      </div>
+
+      <div class="modal-footer">
+        <button class="confirm" id="scanClose" disabled>Close</button>
       </div>
     </div>
-    <ul id="gameList" class="game-list"></ul>
-  </aside>
-
-  <!-- ───────── MODS / DETAILS PANE ───────── -->
-  <section id="mods">
-    <div id="searchWrap">
-      <input id="search" placeholder="🔍 Search mods … (Ctrl+F)">
-    </div>
-    <div id="modSplit">
-      <ul id="modList"></ul>
-      <article id="details"><p>Select a mod …</p></article>
-    </div>
-  </section>
-</main>
-
-<footer id="status">
-  <div class="status-left">
-    <span id="statusGame"><span class="label">Game:</span><span class="value">—</span></span>
-    <span id="statusFile"><span class="label">Mod:</span><span class="value">—</span></span>
-    <span id="statusSizeMod"><span class="label">Size:</span><span class="value">—</span></span>
-    <span id="statusModDate"><span class="label">Modified:</span><span class="value">—</span></span>
   </div>
-  <div class="status-right">
-    <span id="statusTotalSize"><span class="label">Total Size:</span><span class="value spinner"></span></span>
-    <span id="statusCount"><span class="label">Mods:</span><span class="value">0</span></span>
-  </div>
-</footer>
 
-<!-- Scan Dialog -->
-<div id="scanBackdrop" class="modal-backdrop">
-  <div class="modal dialog-modal">
-    <div class="modal-header">
-      <h3 id="scanTitle">Scanning Mods…</h3>
-      <button class="modal-close" aria-label="Close">&times;</button>
-    </div>
-    <div class="modal-body">
-      <progress id="scanProg" value="0" max="100"></progress>
-      <pre id="scanText"></pre>
-    </div>
-    <div class="modal-footer">
-      <button class="confirm" id="scanClose" disabled>Close</button>
-    </div>
-  </div>
-</div>
+  <!-- ═════════════════════════════ About Dialog (polished) ═════════════════ -->
+  <div id="aboutBackdrop" class="modal-backdrop">
+    <div class="modal dialog-modal about-modal">
+      <div class="modal-header">
+        <h3>
+          <img src="assets/logo.png" alt="" style="width:28px;vertical-align:-6px;margin-right:8px">
+          About ModNinja
+        </h3>
+        <button class="modal-close" aria-label="Close">&times;</button>
+      </div>
 
-<!-- About Dialog -->
-<div id="aboutBackdrop" class="modal-backdrop">
-  <div class="modal dialog-modal about-modal">
-    <div class="modal-header">
-      <h3>About ModNinja</h3>
-      <button class="modal-close" aria-label="Close">&times;</button>
-    </div>
-    <div class="modal-body">
-      <p>A lightweight, read-only Vortex mod browser.</p>
-      <p>Version <span id="aboutVersion">0.1.0</span></p>
-      <ul>
-        <li><strong>Author:</strong> Robin Doak</li>
-        <li><strong>GitHub:</strong> <a href="https://github.com/skillerious" target="_blank">skillerious</a></li>
-        <li><strong>License:</strong> MIT</li>
-      </ul>
-    </div>
-    <div class="modal-footer">
-      <button class="confirm" id="aboutClose">Close</button>
+      <div class="modal-body">
+        <!-- hero band -->
+        <section class="about-hero">
+          <img class="about-logo" src="assets/logo.png" alt="ModNinja Logo">
+          <p class="about-tag">
+            <strong>ModNinja</strong> is a fast, read-only <span class="brand">Vortex</span> mod browser.<br>
+            Browse, filter & inspect your installed mods <em>instantly</em> – no heavy client launch required.
+          </p>
+        </section>
+
+        <!-- two-column info grid -->
+        <section class="about-grid">
+          <div class="about-meta">
+            <h4>Application</h4>
+            <ul>
+              <li><span>Version</span><b id="aboutVersion">0.1.0</b></li>
+              <li><span>License</span><b>MIT</b></li>
+              <li><span>Author</span><b>Robin Doak</b></li>
+            </ul>
+          </div>
+
+          <div class="about-links">
+            <h4>Resources</h4>
+            <ul>
+              <li><img src="assets/github.svg" class="icon" alt=""><a href="https://github.com/skillerious/mod-ninja" target="_blank">Source&nbsp;Code</a></li>
+              <li><img src="assets/bug.svg"    class="icon" alt=""><a href="https://github.com/skillerious/mod-ninja/issues" target="_blank">Report&nbsp;a&nbsp;Bug</a></li>
+              <li><img src="assets/coffee.svg" class="icon" alt=""><a href="https://ko-fi.com/skillerious" target="_blank">Support&nbsp;the&nbsp;Project</a></li>
+            </ul>
+          </div>
+        </section>
+      </div>
+
+      <div class="modal-footer">
+        <button class="confirm" id="aboutClose">Close</button>
+      </div>
     </div>
   </div>
-</div>
 
-<!-- Context Menus -->
-<div id="modContextMenu"  class="context-menu"></div>
-<div id="gameContextMenu" class="context-menu"></div>
+  <!-- ═════════════════════════════ Context-menus & tooltip ══════════════════ -->
+  <div id="modContextMenu"  class="context-menu"></div>
+  <div id="gameContextMenu" class="context-menu"></div>
+  <div id="toolbarTooltip"  class="toolbar-tooltip"></div>
 
-<!-- Tooltip -->
-<div id="toolbarTooltip" class="toolbar-tooltip"></div>
-
-<script type="module" src="renderer.js"></script>
+  <!-- ═════════════════════════════ Main renderer script ════════════════════ -->
+  <script type="module" src="renderer.js"></script>
 </body>
 </html>

@@ -1,5 +1,6 @@
 /* ==========================================================================
-   ModNinja – Electron main process
+   ModNinja – Electron main process main.js
+   Copyright (C) 2025  Robin Doak <
    ========================================================================== */
    const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron');
    const path      = require('path');
@@ -283,11 +284,14 @@
    ipcMain.handle('open:settings',     ()                => {
      const sw = new BrowserWindow({
        width: 800,
-       height: 400,
+       height: 650,
        parent: win,
        modal: true,
        show: false,
+       frame: false,                       // NEW → no native title-bar
+        titleBarStyle: 'hiddenInset',       // tidy macOS / Windows edge
        backgroundColor: '#161616',
+       autoHideMenuBar: true,
        webPreferences: {
          contextIsolation: true,
          preload: path.join(__dirname, 'preload.js')
