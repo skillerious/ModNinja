@@ -1,354 +1,413 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Settings — ModNinja</title>
-  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-  <style>
-    :root {
-      --bg: #161616;
-      --fg: #e0e0e0;
-      --panel: #1f1f1f;
-      --accent: #4a8cff;
-      --border: #333;
-      --radius: 10px;
-      --transition: 0.25s ease;
-      --shadow: 0 6px 24px rgba(0, 0, 0, 0.6);
-    }
+<meta charset="UTF-8">
+<title>Settings — ModNinja</title>
 
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      font-family: "Segoe UI", sans-serif;
-    }
+<!-- Tight CSP (no unsafe-eval) so Electron stops warning -->
+<meta http-equiv="Content-Security-Policy"
+      content="default-src 'self';
+               img-src      'self' data:;
+               style-src    'self' 'unsafe-inline';
+               script-src   'self' https://cdn.jsdelivr.net 'unsafe-inline';">
 
-    body {
-      background: var(--bg);
-      color: var(--fg);
-      height: 100vh;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-    }
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
-    .settings-window {
-      display: flex;
-      flex-direction: column;
-      height: 100vh;
-    }
+<style>
+/* ═════════ root theme ═════════ */
+:root{
+  --bg:#161616;--panel:#1f1f1f;--fg:#e0e0e0;--border:#333;
+  --border-light:#2a2a2a;--accent:#4a8cff;--radius:10px;
+  --transition:.25s ease;--shadow:0 6px 24px rgba(0,0,0,.6);
+  --font:"Segoe UI",sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;font-family:var(--font)}
+html,body{height:100%;background:var(--bg);color:var(--fg);overflow:hidden}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
-    /* ───── Titlebar ───── */
-    .custom-titlebar {
-      height: 42px;
-      background: var(--panel);
-      color: var(--fg);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0 16px;
-      border-bottom: 1px solid var(--border);
-      -webkit-app-region: drag;
-    }
+/* ═════════ Title bar ═════════ */
+.titlebar{
+  -webkit-app-region:drag;height:42px;padding:0 18px;
+  background:var(--panel);border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between
+}
+.titlebar .label{font-weight:600;color:var(--accent)}
+.titlebar button{
+  -webkit-app-region:no-drag;font-size:20px;color:var(--fg);background:none;border:none;
+  padding:4px 10px;border-radius:5px;cursor:pointer;
+  transition:background var(--transition),color var(--transition)
+}
+.titlebar button:hover{background:rgba(255,255,255,.12);color:var(--accent)}
 
-    .custom-titlebar .title {
-      font-size: 15px;
-      font-weight: 500;
-    }
+/* ═════════ Layout ═════════ */
+.wrapper{display:flex;height:calc(100% - 42px)}
+.sidebar{
+  width:240px;flex-shrink:0;background:var(--panel);border-right:1px solid var(--border);
+  padding:14px 10px;display:flex;flex-direction:column;gap:6px
+}
+.sidebar .tab{
+  display:flex;align-items:center;gap:10px;padding:9px 10px;width:100%;
+  background:none;border:none;color:var(--fg);font-size:14px;text-align:left;
+  border-radius:var(--radius);cursor:pointer;transition:background var(--transition)
+}
+.sidebar .tab svg{width:16px;height:16px;fill:currentColor}
+.sidebar .tab:hover,.sidebar .tab.active{background:var(--accent);color:#fff}
 
-    .custom-titlebar .close-btn {
-      -webkit-app-region: no-drag;
-      background: transparent;
-      border: none;
-      color: var(--fg);
-      font-size: 20px;
-      cursor: pointer;
-      padding: 4px 8px;
-      border-radius: 6px;
-      transition: background var(--transition);
-    }
+.main{
+  flex:1;padding:26px 32px;background:var(--bg);overflow-y:auto;
+  display:flex;flex-direction:column;gap:32px
+}
+.tab-content{display:none;animation:fade .25s ease}
+.tab-content.active{display:block}
+.tab-content h2{
+  font-size:18px;color:var(--accent);margin-bottom:18px;
+  border-bottom:1px solid var(--border);padding-bottom:6px
+}
 
-    .custom-titlebar .close-btn:hover {
-      background: rgba(255,255,255,0.1);
-      color: var(--accent);
-    }
+/* ═════════ Rows & separators ═════════ */
+.setting-row{
+  display:grid;grid-template-columns:1fr auto;gap:14px;align-items:center;
+  padding:10px 0;border-top:1px solid var(--border-light)
+}
+.setting-row:first-of-type{border-top:0}
 
-    /* ───── Layout ───── */
-    .settings-container {
-      display: flex;
-      flex: 1;
-      overflow: hidden;
-    }
+/* Inputs */
+.setting-row input[type=text],
+.setting-row input[type=number],
+.setting-row select{
+  width:100%;padding:9px 11px;background:var(--panel);color:var(--fg);
+  border:1px solid var(--border);border-radius:6px
+}
 
-    .settings-sidebar {
-      width: 200px;
-      background: var(--panel);
-      border-right: 1px solid var(--border);
-      padding: 16px;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
+/* Folder picker (Browse + Scan) */
+.folder-picker{display:grid;grid-template-columns:1fr auto auto;gap:8px}
+.folder-picker button{
+  background:var(--accent);color:#fff;border:none;padding:9px 14px;border-radius:6px;
+  cursor:pointer;transition:filter var(--transition)
+}
+.folder-picker button:hover{filter:brightness(1.1)}
 
-    .settings-sidebar .tab {
-      background: none;
-      border: none;
-      padding: 10px 12px;
-      color: var(--fg);
-      text-align: left;
-      font-size: 14px;
-      border-radius: var(--radius);
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      transition: background var(--transition);
-    }
+/* ═════════ Animated toggle ═════════ */
+.switch{position:relative;width:52px;height:28px}
+.switch input{opacity:0;width:0;height:0}
+.knob{
+  position:absolute;inset:0;border-radius:28px;background:#555;
+  transition:background .25s ease,box-shadow .25s ease
+}
+.knob::before{
+  content:"";position:absolute;left:4px;top:4px;width:20px;height:20px;border-radius:50%;
+  background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.5);
+  transition:transform .25s ease
+}
+.switch input:checked + .knob{
+  background:linear-gradient(90deg,var(--accent),#6ea6ff);
+  box-shadow:0 0 6px 2px rgba(74,140,255,.45)
+}
+.switch input:checked + .knob::before{transform:translateX(24px)}
 
-    .settings-sidebar .tab:hover,
-    .settings-sidebar .tab.active {
-      background: var(--accent);
-      color: #fff;
-    }
+@keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 
-    .settings-main {
-      flex: 1;
-      overflow-y: auto;
-      padding: 24px;
-      display: flex;
-      flex-direction: column;
-      gap: 32px;
-      background: var(--bg);
-    }
-
-    .tab-content {
-      display: none;
-      animation: fadeIn 0.3s ease;
-    }
-
-    .tab-content.active {
-      display: block;
-    }
-
-    .tab-content h2 {
-      font-size: 18px;
-      color: var(--accent);
-      margin-bottom: 16px;
-    }
-
-    .setting-group {
-      display: grid;
-      grid-template-columns: 1fr auto;
-      gap: 12px;
-      align-items: center;
-      margin-bottom: 16px;
-    }
-
-    .setting-group input[type="text"],
-    .setting-group select {
-      width: 100%;
-      padding: 8px 10px;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      background: var(--panel);
-      color: var(--fg);
-      font-size: 14px;
-    }
-
-    /* ───── Toggle ───── */
-    .toggle {
-      position: relative;
-      display: inline-block;
-      width: 46px;
-      height: 24px;
-    }
-
-    .toggle input {
-      opacity: 0;
-      width: 0;
-      height: 0;
-    }
-
-    .slider {
-      position: absolute;
-      inset: 0;
-      background-color: var(--border);
-      border-radius: 24px;
-      transition: background var(--transition);
-    }
-
-    .slider::before {
-      content: "";
-      position: absolute;
-      height: 18px;
-      width: 18px;
-      left: 3px;
-      top: 3px;
-      background-color: #fff;
-      border-radius: 50%;
-      transition: transform var(--transition);
-    }
-
-    .toggle input:checked + .slider {
-      background-color: var(--accent);
-    }
-
-    .toggle input:checked + .slider::before {
-      transform: translateX(22px);
-    }
-
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(10px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    .folder-picker {
-      display: grid;
-      grid-template-columns: 1fr auto;
-      gap: 10px;
-      margin-top: 8px;
-    }
-
-    .folder-picker button {
-      background: var(--accent);
-      border: none;
-      padding: 8px 12px;
-      color: #fff;
-      border-radius: 6px;
-      cursor: pointer;
-      transition: filter var(--transition);
-    }
-
-    .folder-picker button:hover {
-      filter: brightness(1.1);
-    }
-  </style>
+@media(max-width:650px){
+  .wrapper{flex-direction:column}
+  .sidebar{flex-direction:row;width:100%;overflow-x:auto}
+  .main{padding:18px}
+}
+</style>
 </head>
+
 <body>
-  <div class="settings-window">
-    <header class="custom-titlebar">
-      <span class="title">Settings</span>
-      <button class="close-btn" onclick="window.close()">×</button>
-    </header>
-    <div class="settings-container">
-      <aside class="settings-sidebar">
-        <button class="tab active" data-tab="general">⚙️ General</button>
-        <button class="tab" data-tab="appearance">🎨 Appearance</button>
-        <button class="tab" data-tab="api">🔌 API</button>
-        <button class="tab" data-tab="notifications">🔔 Notifications</button>
-      </aside>
-      <main class="settings-main">
-        <section id="general" class="tab-content active">
-          <h2>General</h2>
-          <div class="setting-group">
-            <label for="autoRefresh">Auto-refresh games</label>
-            <label class="toggle">
-              <input type="checkbox" id="autoRefresh">
-              <span class="slider"></span>
-            </label>
-          </div>
-          <div class="setting-group">
-            <label for="showHidden">Show hidden mods</label>
-            <label class="toggle">
-              <input type="checkbox" id="showHidden">
-              <span class="slider"></span>
-            </label>
-          </div>
-          <div class="setting-group" style="grid-template-columns: 1fr;">
-            <label for="vortexFolder">Vortex Folder</label>
-            <div class="folder-picker">
-              <input type="text" id="vortexFolder" readonly>
-              <button type="button" id="browseBtn">Browse…</button>
-            </div>
-          </div>
-        </section>
+<header class="titlebar">
+  <span class="label">Settings</span>
+  <button onclick="window.close()">×</button>
+</header>
 
-        <section id="appearance" class="tab-content">
-          <h2>Appearance</h2>
-          <div class="setting-group">
-            <label for="themeSelect">Theme</label>
-            <select id="themeSelect">
-              <option value="dark">Dark</option>
-              <option value="light">Light</option>
-            </select>
-          </div>
-          <div class="setting-group">
-            <label for="compactMode">Compact list mode</label>
-            <label class="toggle">
-              <input type="checkbox" id="compactMode">
-              <span class="slider"></span>
-            </label>
-          </div>
-        </section>
+<div class="wrapper">
+  <!-- ────────── Sidebar ────────── -->
+  <nav class="sidebar">
+    <button class="tab active" data-tab="general">
+      <svg viewBox="0 0 24 24"><path d="M12 1v3m0 16v3m11-11h-3M4 12H1m16.95-7.95-2.12 2.12M6.17 17.83l-2.12 2.12m0-13.66 2.12 2.12m11.66 11.66 2.12 2.12M12 7a5 5 0 1 1 0 10 5 5 0 0 1 0-10Z"/></svg>
+      General
+    </button>
+    <button class="tab" data-tab="appearance">
+      <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75l11-11.03-3.75-3.75L3 17.25Zm14.71-9.04c.39-.39.39-1.01 0-1.4l-2.54-2.54a.9959.9959 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.84Z"/></svg>
+      Appearance
+    </button>
+    <button class="tab" data-tab="api">
+      <svg viewBox="0 0 24 24"><path d="M12 8V4l8 8-8 8v-4H4V8h8Z"/></svg>
+      API
+    </button>
+    <button class="tab" data-tab="notifications">
+      <svg viewBox="0 0 24 24"><path d="M12 22a2 2 0 0 0 1.995-1.85L14 20H10a2 2 0 0 0 1.85 1.995L12 22Zm6-6v-5a6 6 0 0 0-5-5.917V4a1 1 0 1 0-2 0v1.083A6 6 0 0 0 6 11v5l-2 2v1h16v-1l-2-2Z"/></svg>
+      Notifications
+    </button>
+    <button class="tab" data-tab="advanced">
+      <svg viewBox="0 0 24 24"><path d="M4 4h16v2H4V4Zm0 14h16v2H4v-2Zm0-7h16v2H4v-2Z"/></svg>
+      Advanced
+    </button>
+  </nav>
 
-        <section id="api" class="tab-content">
-          <h2>API</h2>
-          <div class="setting-group">
-            <label for="clientId">IGDB Client ID</label>
-            <input type="text" id="clientId">
-          </div>
-          <div class="setting-group">
-            <label for="clientSecret">IGDB Client Secret</label>
-            <input type="text" id="clientSecret">
-          </div>
-        </section>
+  <!-- ────────── Main content ────────── -->
+  <main class="main">
 
-        <section id="notifications" class="tab-content">
-          <h2>Notifications</h2>
-          <div class="setting-group">
-            <label for="enableNotifications">Enable notifications</label>
-            <label class="toggle">
-              <input type="checkbox" id="enableNotifications">
-              <span class="slider"></span>
-            </label>
-          </div>
-        </section>
-      </main>
-    </div>
-  </div>
+    <!-- ========== GENERAL ========== -->
+    <section id="general" class="tab-content active">
+      <h2>General</h2>
 
-  <script>
-    const { loadSettings, saveSettings, chooseFolder, listGames } = window.api;
+      <div class="setting-row">
+        <label for="autoRefresh">Auto-refresh games</label>
+        <label class="switch"><input id="autoRefresh" type="checkbox"><span class="knob"></span></label>
+      </div>
 
-    document.querySelectorAll('.tab').forEach(tab => {
-      tab.addEventListener('click', () => {
-        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-        document.querySelectorAll('.tab-content').forEach(p => p.classList.remove('active'));
-        tab.classList.add('active');
-        document.getElementById(tab.dataset.tab).classList.add('active');
-      });
-    });
+      <div class="setting-row">
+        <label for="showHidden">Show hidden mods</label>
+        <label class="switch"><input id="showHidden" type="checkbox"><span class="knob"></span></label>
+      </div>
 
-    window.addEventListener('DOMContentLoaded', async () => {
-      const s = await loadSettings(); if (!s) return;
-      document.getElementById('autoRefresh').checked         = !!s.autoRefresh;
-      document.getElementById('showHidden').checked          = !!s.showHidden;
-      document.getElementById('vortexFolder').value          = s.vortexFolder || '';
-      document.getElementById('themeSelect').value           = s.theme || 'dark';
-      document.getElementById('compactMode').checked         = !!s.compactMode;
-      document.getElementById('clientId').value              = s.clientId || '';
-      document.getElementById('clientSecret').value          = s.clientSecret || '';
-      document.getElementById('enableNotifications').checked = !!s.enableNotifications;
-    });
+      <div class="setting-row">
+        <label for="checkUpdates">Check for updates on launch</label>
+        <label class="switch"><input id="checkUpdates" type="checkbox"><span class="knob"></span></label>
+      </div>
 
-    document.getElementById('browseBtn').addEventListener('click', async () => {
-      const res = await chooseFolder();
-      if (res?.modsDir) document.getElementById('vortexFolder').value = res.modsDir;
-    });
+      <div class="setting-row">
+        <label for="analytics">Anonymous usage analytics</label>
+        <label class="switch"><input id="analytics" type="checkbox"><span class="knob"></span></label>
+      </div>
 
-    window.addEventListener('beforeunload', async () => {
-      const cfg = {
-        autoRefresh: document.getElementById('autoRefresh').checked,
-        showHidden: document.getElementById('showHidden').checked,
-        vortexFolder: document.getElementById('vortexFolder').value,
-        theme: document.getElementById('themeSelect').value,
-        compactMode: document.getElementById('compactMode').checked,
-        clientId: document.getElementById('clientId').value,
-        clientSecret: document.getElementById('clientSecret').value,
-        enableNotifications: document.getElementById('enableNotifications').checked
-      };
-      await saveSettings(cfg);
-    });
-  </script>
+      <div class="setting-row folder-picker">
+        <label for="vortexFolder">Vortex folder</label>
+        <input id="vortexFolder" type="text" readonly>
+        <button id="browseBtn" type="button">Browse…</button>
+        <button id="scanBtn" type="button">Scan</button>
+      </div>
+    </section>
+
+    <!-- ========== APPEARANCE ========== -->
+    <section id="appearance" class="tab-content">
+      <h2>Appearance</h2>
+
+      <div class="setting-row">
+        <label for="themeSelect">Theme</label>
+        <select id="themeSelect">
+          <option value="dark">Dark</option>
+          <option value="light">Light</option>
+          <option value="system">System</option>
+        </select>
+      </div>
+
+      <div class="setting-row">
+        <label for="compactMode">Compact list mode</label>
+        <label class="switch"><input id="compactMode" type="checkbox"><span class="knob"></span></label>
+      </div>
+
+      <div class="setting-row">
+        <label for="blurUI">Blur / glass background</label>
+        <label class="switch"><input id="blurUI" type="checkbox"><span class="knob"></span></label>
+      </div>
+
+      <div class="setting-row">
+        <label for="fontSize">Base font-size&nbsp;(%)</label>
+        <input id="fontSize" type="number" min="80" max="140" step="5">
+      </div>
+
+      <div class="setting-row">
+        <label for="accentPicker">Accent colour</label>
+        <input id="accentPicker" type="color" style="width:56px;padding:0;border:none">
+      </div>
+    </section>
+
+    <!-- ========== API ========== -->
+    <section id="api" class="tab-content">
+      <h2>IGDB API</h2>
+
+      <div class="setting-row">
+        <label for="clientId">Client ID</label>
+        <input id="clientId" type="text">
+      </div>
+
+      <div class="setting-row">
+        <label for="clientSecret">Client Secret</label>
+        <input id="clientSecret" type="text">
+      </div>
+
+      <div class="setting-row">
+        <label for="enableCaching">Cache cover images</label>
+        <label class="switch"><input id="enableCaching" type="checkbox"><span class="knob"></span></label>
+      </div>
+
+      <div class="setting-row">
+        <label for="cacheDays">Cache TTL (days)</label>
+        <input id="cacheDays" type="number" min="1" max="30">
+      </div>
+    </section>
+
+    <!-- ========== NOTIFICATIONS ========== -->
+    <section id="notifications" class="tab-content">
+      <h2>Notifications</h2>
+
+      <div class="setting-row">
+        <label for="enableNotifications">Desktop notifications</label>
+        <label class="switch"><input id="enableNotifications" type="checkbox"><span class="knob"></span></label>
+      </div>
+
+      <div class="setting-row">
+        <label for="notifyOnScan">Notify when scan finishes</label>
+        <label class="switch"><input id="notifyOnScan" type="checkbox"><span class="knob"></span></label>
+      </div>
+
+      <div class="setting-row">
+        <label for="playSound">Play sound on complete</label>
+        <label class="switch"><input id="playSound" type="checkbox"><span class="knob"></span></label>
+      </div>
+    </section>
+
+    <!-- ========== ADVANCED ========== -->
+    <section id="advanced" class="tab-content">
+      <h2>Advanced</h2>
+
+      <div class="setting-row">
+        <label for="enableLogging">Enable logging</label>
+        <label class="switch"><input id="enableLogging" type="checkbox"><span class="knob"></span></label>
+      </div>
+
+      <div class="setting-row">
+        <label for="logLevel">Log level</label>
+        <select id="logLevel">
+          <option value="error">Error</option>
+          <option value="warn">Warning</option>
+          <option value="info">Info</option>
+          <option value="debug">Debug</option>
+        </select>
+      </div>
+
+      <div class="setting-row">
+        <label for="maxThreads">Max threads</label>
+        <input id="maxThreads" type="number" min="1" max="32">
+      </div>
+
+      <div class="setting-row">
+        <label for="developerMode">Developer mode</label>
+        <label class="switch"><input id="developerMode" type="checkbox"><span class="knob"></span></label>
+      </div>
+
+      <div class="setting-row">
+        <label>Reset cached covers</label>
+        <button id="resetCacheBtn" style="background:#e04545;color:#fff;border:none;padding:8px 16px;border-radius:6px;cursor:pointer">Delete cache</button>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+const bridge = window.api || {};          // single preload bridge
+
+/* ───── sidebar navigation ───── */
+document.querySelectorAll('.sidebar .tab').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.sidebar .tab').forEach(t=>t.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById(btn.dataset.tab).classList.add('active');
+  });
+});
+
+/* ---------- hydration ---------- */
+const $ = id=>document.getElementById(id);
+async function load(){
+  const s=(await bridge.loadSettings?.())||{};
+  $('autoRefresh').checked        =s.autoRefresh ?? false;
+  $('showHidden').checked         =s.showHidden ?? false;
+  $('checkUpdates').checked       =s.checkUpdates ?? true;
+  $('analytics').checked          =s.analytics ?? false;
+  $('vortexFolder').value         =s.vortexFolder ?? '';
+  $('themeSelect').value          =s.theme ?? 'dark';
+  $('compactMode').checked        =s.compactMode ?? false;
+  $('blurUI').checked             =s.blurUI ?? false;
+  $('fontSize').value             =s.fontSize ?? 100;
+  $('accentPicker').value         =s.accentColor ?? '#4a8cff';
+  $('clientId').value             =s.clientId ?? '';
+  $('clientSecret').value         =s.clientSecret ?? '';
+  $('enableCaching').checked      =s.enableCaching ?? true;
+  $('cacheDays').value            =s.cacheDays ?? 7;
+  $('enableNotifications').checked=s.enableNotifications ?? false;
+  $('notifyOnScan').checked       =s.notifyOnScan ?? true;
+  $('playSound').checked          =s.playSound ?? false;
+  $('enableLogging').checked      =s.enableLogging ?? false;
+  $('logLevel').value             =s.logLevel ?? 'info';
+  $('maxThreads').value           =s.maxThreads ?? 4;
+  $('developerMode').checked      =s.developerMode ?? false;
+}
+document.addEventListener('DOMContentLoaded',load);
+
+/* ---------- persist on change ---------- */
+async function save(){
+  const cfg={
+    autoRefresh:$('autoRefresh').checked,
+    showHidden:$('showHidden').checked,
+    checkUpdates:$('checkUpdates').checked,
+    analytics:$('analytics').checked,
+    vortexFolder:$('vortexFolder').value,
+    theme:$('themeSelect').value,
+    compactMode:$('compactMode').checked,
+    blurUI:$('blurUI').checked,
+    fontSize:+$('fontSize').value||100,
+    accentColor:$('accentPicker').value,
+    clientId:$('clientId').value,
+    clientSecret:$('clientSecret').value,
+    enableCaching:$('enableCaching').checked,
+    cacheDays:+$('cacheDays').value||7,
+    enableNotifications:$('enableNotifications').checked,
+    notifyOnScan:$('notifyOnScan').checked,
+    playSound:$('playSound').checked,
+    enableLogging:$('enableLogging').checked,
+    logLevel:$('logLevel').value,
+    maxThreads:+$('maxThreads').value||4,
+    developerMode:$('developerMode').checked
+  };
+  await bridge.saveSettings?.(cfg);
+}
+document.addEventListener('change',e=>{
+  if(e.target.closest('.main')) save();
+});
+window.addEventListener('beforeunload',save);
+
+/* ---------- Browse & Scan ---------- */
+$('browseBtn').addEventListener('click',async()=>{
+  const res=await bridge.chooseFolder?.();
+  if(res?.modsDir){$('vortexFolder').value=res.modsDir;save()}
+});
+
+$('scanBtn').addEventListener('click',async()=>{
+  const games=await bridge.listGames?.();
+  if(!games?.length){
+    Swal.fire({toast:true,position:'bottom-end',timer:2500,showConfirmButton:false,
+      text:'No Vortex installations found',icon:'warning',
+      background:getComputedStyle(document.body).getPropertyValue('--panel').trim(),
+      color:getComputedStyle(document.body).getPropertyValue('--fg').trim()});
+    return;
+  }
+  const root=games[0].modsDir.replace(/\\[^\\]+\\mods$/,'');
+  $('vortexFolder').value=root; save();
+  Swal.fire({toast:true,position:'bottom-end',timer:2000,showConfirmButton:false,
+    icon:'success',text:'Folder set to '+root,
+    background:getComputedStyle(document.body).getPropertyValue('--panel').trim(),
+    color:getComputedStyle(document.body).getPropertyValue('--fg').trim()});
+});
+
+/* ---------- reset cache (demo) ---------- */
+$('resetCacheBtn').addEventListener('click',()=>{
+  Swal.fire({
+    title:'Clear cached covers?',
+    text:'All downloaded cover images will be deleted.',
+    icon:'warning',
+    showCancelButton:true,
+    confirmButtonColor:'#e04545',
+    background:getComputedStyle(document.body).getPropertyValue('--panel').trim(),
+    color:getComputedStyle(document.body).getPropertyValue('--fg').trim()
+  }).then(r=>{
+    if(r.isConfirmed) bridge.clearCoverCache?.();
+  });
+});
+</script>
 </body>
 </html>

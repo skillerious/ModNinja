@@ -43,6 +43,46 @@ window.addEventListener('DOMContentLoaded', () => {
   };
 
   // ──────────────────────────────────────────────────────────────────────
+  // Core API & Settings machinery
+  // ──────────────────────────────────────────────────────────────────────
+
+  const api = window.api;
+  let settings = {};
+
+  async function loadAndApplySettings() {
+    settings = await api.loadSettings() || {};
+
+    // Theme (dark/light)
+    document.body.classList.toggle('light', settings.theme === 'light');
+
+    // Accent color
+    if (settings.accentColor) {
+      document.documentElement.style.setProperty('--accent', settings.accentColor);
+    }
+
+    // Compact list mode (games pane)
+    const gameUL = $('#gameList');
+    if (gameUL) {
+      gameUL.classList.toggle('list-view', !!settings.compactMode);
+    }
+
+    // Auto-refresh games list
+    if (window._autoRefreshTimer) clearInterval(window._autoRefreshTimer);
+    if (settings.autoRefresh) {
+      window._autoRefreshTimer = setInterval(() => {
+        init(currentGameId || null);
+      }, 60000);
+    }
+
+    // Re-render mod list to apply showHidden
+    renderModList();
+  }
+
+  // Apply on startup and when window regains focus
+  window.addEventListener('focus', loadAndApplySettings);
+  loadAndApplySettings();
+
+  // ──────────────────────────────────────────────────────────────────────
   // Mini file-tree builder
   // ──────────────────────────────────────────────────────────────────────
 
@@ -173,8 +213,6 @@ window.addEventListener('DOMContentLoaded', () => {
       e.target.closest('.modal-backdrop').classList.remove('active');
     }
   });
-
-  // Close when clicking outside modal
   dialogBackdrop.addEventListener('click', e => {
     if (e.target === dialogBackdrop) dialogBackdrop.classList.remove('active');
   });
@@ -195,7 +233,7 @@ window.addEventListener('DOMContentLoaded', () => {
   const scanClose     = $('#scanClose');
   const scanPercent   = $('#scanPercent');
   const scanElapsed   = $('#scanElapsed');
-  const scanCurrent   = $('#scanCurrent');   // will now display “Mod x / y”
+  const scanCurrent   = $('#scanCurrent');
   const aboutClose    = $('#aboutClose');
   const dialogTitle   = $('#dialogTitle');
   const dialogMsg     = $('#dialogMessage');
@@ -228,7 +266,6 @@ window.addEventListener('DOMContentLoaded', () => {
   let currentGameId = '';
   let detailsSeq    = 0;
   const modCache    = new Map();
-  const api         = window.api;
 
   // ──────────────────────────────────────────────────────────────────────
   // Dialog helpers
@@ -283,8 +320,17 @@ window.addEventListener('DOMContentLoaded', () => {
     exportCsv:   ()        => exportList('csv'),
     saveOrder:   ()        => saveOrder(),
     loadOrder:   ()        => loadOrder(),
-    theme:       ()        => document.body.classList.toggle('light'),
-    settings:    ()        => api.openSettings(),
+    theme:       ()        => {
+      settings.theme = (settings.theme === 'light' ? 'dark' : 'light');
+      document.body.classList.toggle('light', settings.theme === 'light');
+      api.saveSettings(settings);
+    },
+    toggleView:  ()        => {
+      settings.compactMode = !settings.compactMode;
+      gameUL.classList.toggle('list-view', settings.compactMode);
+      api.saveSettings(settings);
+    },
+    settings:    ()        => api.openSettings(),       // ← opens settings.html
     about:       ()        => aboutBackdrop.classList.add('active'),
     filterGames: ()        => {
       const term = (gameSearch?.value || '').trim().toLowerCase();
@@ -292,8 +338,7 @@ window.addEventListener('DOMContentLoaded', () => {
         const t = li.querySelector('.title').textContent.toLowerCase();
         li.style.display = t.includes(term) ? '' : 'none';
       });
-    },
-    toggleView:  ()        => gameUL.classList.toggle('list-view')
+    }
   };
 
   document.querySelectorAll('#toolbar button').forEach(btn => {
@@ -309,7 +354,6 @@ window.addEventListener('DOMContentLoaded', () => {
         window.innerWidth - tooltip.offsetWidth - 4
       );
       let y = r.bottom + 4;
-      // if tooltip would go off bottom, flip above
       if (y + tooltip.offsetHeight > window.innerHeight) {
         y = r.top - tooltip.offsetHeight - 4;
       }
@@ -354,17 +398,15 @@ window.addEventListener('DOMContentLoaded', () => {
     const first = selectId
       ? gameUL.querySelector(`li[data-id="${selectId}"]`)
       : gameUL.firstElementChild;
-    first && first.click();
+    if (first) first.click();
   }
 
   // ──────────────────────────────────────────────────────────────────────
-  // Context menus with flip-above logic & single-menu enforcement
+  // Context menus (games & mods)
   // ──────────────────────────────────────────────────────────────────────
 
   function showGameContextMenu(x, y, game) {
-    // hide other menu
     ctxModMenu.style.display = 'none';
-
     ctxGameMenu.innerHTML = `
       <div class="context-menu-item" data-action="openMods">Open Mods Folder</div>
       <div class="context-menu-item" data-action="openVortex">Open Vortex Folder</div>
@@ -378,7 +420,6 @@ window.addEventListener('DOMContentLoaded', () => {
     }
     ctxGameMenu.style.left = `${x}px`;
     ctxGameMenu.style.top  = `${top}px`;
-
     ctxGameMenu.querySelectorAll('.context-menu-item').forEach(item => {
       item.onclick = async () => {
         const act = item.dataset.action;
@@ -398,20 +439,16 @@ window.addEventListener('DOMContentLoaded', () => {
   }
 
   function showModContextMenu(x, y, modName) {
-    // hide other menu
     ctxGameMenu.style.display = 'none';
-
     const idMatch  = modName.match(/-(\d+)(?:-|$)/);
     const modId    = idMatch ? idMatch[1] : null;
     const nexusUrl = (modId && currentGameId)
-      ? `https://www.nexusmods.com/${currentGameId}/mods/${modId}`
-      : null;
-
+      ? `https://www.nexusmods.com/${currentGameId}/mods/${modId}` : null;
     ctxModMenu.innerHTML = `
       <div class="context-menu-item" data-action="openMod">Open Mod Folder</div>
       <div class="context-menu-item" data-action="openGame">Open Game Mods Folder</div>
       <div class="context-menu-item" data-action="copyPath">Copy Mod Path</div>
-      ${nexusUrl ? '<div class="context-menu-item" data-action="openNexus">View on Nexus</div>' : ''}
+      ${nexusUrl ? `<div class="context-menu-item" data-action="openNexus">View on Nexus</div>` : ''}
       <div class="context-menu-item" data-action="refresh">Refresh Mods List</div>
     `;
     ctxModMenu.style.display = 'block';
@@ -422,7 +459,6 @@ window.addEventListener('DOMContentLoaded', () => {
     }
     ctxModMenu.style.left = `${x}px`;
     ctxModMenu.style.top  = `${top}px`;
-
     ctxModMenu.querySelectorAll('.context-menu-item').forEach(item => {
       item.onclick = () => {
         const act = item.dataset.action;
@@ -472,7 +508,10 @@ window.addEventListener('DOMContentLoaded', () => {
   function renderModList() {
     modUL.textContent = '';
     const frag = document.createDocumentFragment();
-    mods.forEach(m => {
+    const toRender = settings.showHidden
+      ? mods.slice()
+      : mods.filter(m => !m.startsWith('.'));
+    toRender.forEach(m => {
       const li = document.createElement('li');
       li.textContent = m;
       li.addEventListener('click', () => showDetails(m));
@@ -484,7 +523,7 @@ window.addEventListener('DOMContentLoaded', () => {
       frag.append(li);
     });
     modUL.append(frag);
-    modUL.firstElementChild && modUL.firstElementChild.click();
+    if (modUL.firstElementChild) modUL.firstElementChild.click();
   }
 
   // ──────────────────────────────────────────────────────────────────────
@@ -567,7 +606,7 @@ window.addEventListener('DOMContentLoaded', () => {
   }
 
   // ──────────────────────────────────────────────────────────────────────
-  // Scan mods dialog  (updated)
+  // Scan mods dialog
   // ──────────────────────────────────────────────────────────────────────
 
   async function scanMods() {
@@ -576,7 +615,6 @@ window.addEventListener('DOMContentLoaded', () => {
     const list = mods.length ? mods : await api.listMods(currentDir);
     if (!list.length) { await showMessage('No mods.'); return; }
 
-    // ── prep UI ─────────────────────────────────────────────────────────
     scanBackdrop.classList.add('active');
     scanTitle.textContent     = 'Scanning Mods…';
     scanText.textContent      = '';
@@ -588,36 +626,30 @@ window.addEventListener('DOMContentLoaded', () => {
     scanClose.disabled        = true;
     scanClose.classList.remove('pulse');
 
-    // ── timer helpers ──────────────────────────────────────────────────
     const t0 = Date.now();
     const timer = setInterval(() => {
       const s = Math.floor((Date.now() - t0) / 1000);
       scanElapsed.textContent =
-        `${String(Math.floor(s / 60)).padStart(2,'0')}:${String(s % 60).padStart(2,'0')}`;
+        `${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;
     }, 1000);
 
-    // ── main loop ──────────────────────────────────────────────────────
     for (let i = 0; i < list.length; i++) {
-      scanCurrent.textContent = `Mod ${i + 1} / ${list.length}`;
-
+      scanCurrent.textContent = `Mod ${i+1} / ${list.length}`;
       try {
         const info = await api.modInfo(currentDir, list[i]);
         scanText.textContent += `${list[i].padEnd(40)}  ${human(info.size).padStart(8)}\n`;
       } catch {
         scanText.textContent += `${list[i].padEnd(40)}  ERROR\n`;
       }
-
       scanText.scrollTop      = scanText.scrollHeight;
-      scanProg.value          = i + 1;
-      scanPercent.textContent = `${Math.round(((i + 1) / list.length) * 100)} %`;
-
-      await new Promise(r => setTimeout(r, 1)); // keep UI responsive
+      scanProg.value          = i+1;
+      scanPercent.textContent = `${Math.round(((i+1)/list.length)*100)} %`;
+      await new Promise(r => setTimeout(r,1));
     }
 
-    // ── finished ───────────────────────────────────────────────────────
     clearInterval(timer);
-    scanCurrent.textContent   = `Mod ${list.length} / ${list.length}`;
-    scanClose.disabled        = false;
+    scanCurrent.textContent = `Mod ${list.length} / ${list.length}`;
+    scanClose.disabled      = false;
     scanClose.classList.add('pulse');
   }
   scanClose.addEventListener('click', () => {
@@ -639,7 +671,7 @@ window.addEventListener('DOMContentLoaded', () => {
     if (!currentDir) return;
     const ord = await api.loadOrder(currentDir);
     if (!ord) { await showMessage('No saved order found.'); return; }
-    mods.sort((a, b) => ord.indexOf(a) - ord.indexOf(b));
+    mods.sort((a,b) => ord.indexOf(a) - ord.indexOf(b));
     renderModList();
   }
 
